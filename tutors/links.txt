@@ -1,0 +1,28 @@
+https://www.youtube.com/watch?v=o-3-lN3bA9w
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=o-3-lN3bA9w" -o "sofia_full.wav"
+ffmpeg -i sofia_full.wav -ss 00:00:10 -t 20 sofia.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=WnTw615z0c4" -o "easy_full.wav"
+ffmpeg -i easy_full.wav -ss 00:00:10 -t 20 easy.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=wuRGBobU7ik" -o "anna_full.wav"
+ffmpeg -i anna_full.wav -ss 00:00:07 -t 20 anna.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=mInnMNk5KHA" -o "froncz_full.wav"
+ffmpeg -i froncz_full.wav -ss 00:00:07 -t 20 froncz.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=GljqUVKwynA" -o "corleo_full.wav"
+ffmpeg -i corleo_full.wav -ss 00:00:12 -t 8 corleo.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=KCEG8blIpLk" -o "francesca_full.wav"
+ffmpeg -i francesca_full.wav -ss 00:00:12 -t 32 francesca.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=Abr9nvImQVQ" -o "penelop_full.wav"
+ffmpeg -i penelop_full.wav -ss 00:04:11 -t 28 penelop.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=3pEBq63FAYs" -o "vaporetto_full.wav"
+ffmpeg -i vaporetto_full.wav -ss 00:04:11 -t 28 vaporetto.wav
+
+
+

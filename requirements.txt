@@ -1,0 +1,7 @@
+flask
+requests
+chatterbox-tts
+soundfile
+torch
+torchvision
+torchaudio
