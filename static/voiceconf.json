@@ -1,0 +1,18 @@
+{
+    "anna": {
+        "exag": 0.4,
+        "cfg": 0.22
+    },
+    "sofia": {
+        "exag": 0.7,
+        "cfg": 0.3
+    },
+    "froncz": {
+        "exag": 0.4,
+        "cfg": 0.22
+    },
+    "default": {
+        "exag": 0.6,
+        "cfg": 0.3
+    }
+}
