@@ -48,7 +48,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install flask torch faster-whisper chatterbox-tts pydub soundfile requests
+pip install flask torch faster-whisper chatterbox-tts pydub soundfile requests qrcode
 
 3. Folder Structure
 
@@ -68,7 +68,7 @@ Plaintext
 
     Run the Backend:
     Bash
-
+    (.\venv\Scripts\activate)
     python server.py
 
     Open the App: Navigate to http://127.0.0.1:5000/ in your browser.

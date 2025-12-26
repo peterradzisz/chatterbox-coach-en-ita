@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Italian Tutor Pro - Manual Mode</title>
+    <title>Italian Tutor Pro - RTX 3090 Edition</title>
     <style>
         :root {
             --bg-dark: #0f172a; --panel-bg: #1e293b; --ita-color: #00d2ff; 
@@ -13,13 +13,14 @@
         .side-col { flex: 1; background: #020617; padding: 20px; border-radius: 20px; border: 1px solid #334155; height: 800px; overflow-y: auto; }
         .container { background: var(--panel-bg); padding: 30px; border-radius: 20px; border: 1px solid #334155; position: relative; }
         
+        /* Panic Button */
         .stop-btn { 
             position: absolute; top: 20px; right: 20px; background: #ef4444; color: white; border: none; 
             padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; 
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); z-index: 100;
         }
 
-        .chat-history { background: #020617; height: 500px; overflow-y: auto; padding: 25px; border-radius: 12px; display: flex; flex-direction: column; gap: 15px; border: 1px solid #1e293b; }
+        .chat-history { background: #020617; height: 500px; overflow-y: auto; padding: 25px; border-radius: 12px; display: flex; flex-direction: column; gap: 15px; border: 1px solid #1e293b; scroll-behavior: smooth; }
 
         /* Block Styles */
         .ita-block { 
@@ -29,27 +30,29 @@
         }
         .ita-block:hover { border-color: var(--ita-color); background: #1e293b; }
         
-        /* Ready State (Loaded but not playing) */
+        /* Ready State */
         .ita-block.ready { border-color: #facc15; background: #422006; }
-        .ita-block.ready::after { content: "▶ Click to Play"; position: absolute; right: 10px; bottom: 5px; font-size: 12px; color: #facc15; }
+        .ita-block.ready::after { content: "▶ Click to Play"; position: absolute; right: 10px; bottom: 5px; font-size: 11px; color: #facc15; font-weight: normal; }
 
         /* Playing State */
         .ita-block.playing { border-color: #22c55e; background: #064e3b; }
-        .ita-block.playing::after { content: "🔊 Playing..."; position: absolute; right: 10px; bottom: 5px; font-size: 12px; color: #22c55e; }
+        .ita-block.playing::after { content: "🔊 Playing..."; position: absolute; right: 10px; bottom: 5px; font-size: 11px; color: #22c55e; }
         
-        .ita-block.loading { opacity: 0.5; border-style: dashed; }
+        .ita-block.loading { opacity: 0.5; border-style: dashed; cursor: wait; }
 
-        .eng-block { display: block; font-size: 18px; color: var(--eng-color); font-style: italic; padding: 5px 15px; border-left: 3px solid #475569; }
-        .sys-block { display: block; font-size: 16px; color: #cbd5e1; margin: 10px 0; }
+        .eng-block { display: block; font-size: 18px; color: var(--eng-color); font-style: italic; padding: 5px 15px; border-left: 3px solid #475569; margin-bottom: 10px; }
+        .sys-block { display: block; font-size: 16px; color: #cbd5e1; margin: 10px 0; line-height: 1.5; }
 
         .settings-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #0f172a; padding: 20px; border-radius: 12px; margin-bottom: 10px; }
         label { font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: bold; }
         select, textarea { background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; width: 100%; box-sizing: border-box; }
-        textarea { padding: 15px; resize: none; margin-top:5px; }
-        .btn { padding: 12px 25px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; background: var(--accent); color: #0f172a; }
+        textarea { padding: 15px; resize: none; margin-top:5px; font-family: inherit; }
+        
+        .btn { padding: 12px 25px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; background: var(--accent); color: #0f172a; transition: 0.2s; }
+        .btn:hover { filter: brightness(1.1); }
         .recording { background: #ef4444 !important; color: white; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        .vocab-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid #38bdf8; font-size: 14px; }
+        .vocab-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid #38bdf8; font-size: 14px; color: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -59,39 +62,53 @@
     </div>
     <div class="main-col">
         <div class="container">
-            <button class="stop-btn" onclick="stopAllAudio()">⏹ STOP ALL</button>
-            <h2 style="margin:0 0 10px 0; color: var(--accent);">🇮🇹 Tutor Pro</h2>
+            <button class="stop-btn" onclick="killSwitch()">⏹ RESET & STOP</button>
+            <h2 style="margin:0 0 10px 0; color: var(--accent);">🇮🇹 Tutor Pro 3090</h2>
             <div class="settings-bar">
-                <div><label>Voice</label><select id="tutorSelect"><option>Loading...</option></select></div>
-                <div><label>Mic</label><select id="sttLang"><option value="it">Italian</option><option value="en">English</option></select></div>
+                <div><label>Voice Profiling</label><select id="tutorSelect"></select></div>
+                <div><label>Mic Input</label><select id="sttLang"><option value="it">Italian</option><option value="en">English</option></select></div>
             </div>
             <label>System Prompt</label>
             <textarea id="system" rows="3">Role: Professional Italian Tutor. 
-Format: Wrap Italian in ###START_AUDIO### and ###STOP_AUDIO###. Wrap English in @@@ENGLISH@@@ and @@@END_ENGLISH@@@. Use "..." for pauses.</textarea>
+Format: Wrap Italian in ###START_AUDIO### and ###STOP_AUDIO###. Wrap English in @@@ENGLISH@@@ and @@@END_ENGLISH@@@.</textarea>
+            
             <div class="chat-history" id="chatWindow"></div>
-            <textarea id="input" rows="2" placeholder="Message..."></textarea>
+            
+            <textarea id="input" rows="2" placeholder="Write in Italian or English..."></textarea>
+            
             <div style="display:flex; gap:10px; margin-top:10px;">
                 <button id="micBtn" class="btn" style="background:#475569; color:white;">🎤 Hold to Speak</button>
-                <button onclick="send()" class="btn">Send</button>
-                <button onclick="location.reload()" class="btn" style="background:#1e293b; color:#64748b; margin-left:auto;">Reset</button>
+                <button onclick="send()" class="btn">Send Message</button>
             </div>
             <audio id="player" style="display:none;"></audio>
         </div>
     </div>
 
 <script>
-let mediaRecorder, audioChunks = [];
-const win = document.getElementById("chatWindow");
-const textInput = document.getElementById("input");
-const mic = document.getElementById('micBtn');
-const player = document.getElementById("player");
+let mediaRecorder, audioChunks = [], currentAbortController = null;
+const win = document.getElementById("chatWindow"), textInput = document.getElementById("input"), mic = document.getElementById('micBtn'), player = document.getElementById("player");
 let currentPlayingBlock = null;
+
+// --- KILL SWITCH ---
+function killSwitch() {
+    if (currentAbortController) {
+        console.log("🛑 Aborting active requests...");
+        currentAbortController.abort();
+    }
+    stopAllAudio();
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    win.innerHTML = "";
+    textInput.value = "";
+    document.getElementById("vocabList").innerHTML = "";
+    console.log("♻️ System Reset.");
+}
 
 function stopAllAudio() {
     player.pause();
     player.currentTime = 0;
     if (currentPlayingBlock) {
         currentPlayingBlock.classList.remove("playing");
+        currentPlayingBlock.classList.add("ready");
         currentPlayingBlock = null;
     }
 }
@@ -111,6 +128,7 @@ async function loadTutors() {
 }
 window.onload = loadTutors;
 
+// --- SPEECH TO TEXT ---
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
@@ -126,77 +144,68 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 mic.onmousedown = () => { audioChunks=[]; mediaRecorder.start(); mic.classList.add('recording'); };
 mic.onmouseup = () => { if(mediaRecorder.state==='recording') mediaRecorder.stop(); mic.classList.remove('recording'); };
 
+// --- CHAT STREAMING ---
 async function send() {
     const text = textInput.value; if (!text) return;
-    const systemPrompt = document.getElementById("system").value;
+    
+    // New AbortController for every message
+    currentAbortController = new AbortController();
+    const signal = currentAbortController.signal;
+
     addMessage(text, 'user-msg');
     textInput.value = "";
     win.scrollTop = win.scrollHeight;
 
     const botBubble = document.createElement("div"); win.appendChild(botBubble);
-    const response = await fetch("/chat_stream", { 
-        method: "POST", 
-        headers: {"Content-Type": "application/json"}, 
-        body: JSON.stringify({ text, system: systemPrompt }) 
-    });
+    
+    try {
+        const response = await fetch("/chat_stream", { 
+            method: "POST", 
+            headers: {"Content-Type": "application/json"}, 
+            body: JSON.stringify({ text, system: document.getElementById("system").value }),
+            signal: signal
+        });
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let mode = 'sys', currentBlock = createBlock(botBubble, 'sys'), buffer = "";
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
 
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, {stream: true});
 
-        const lines = decoder.decode(value, {stream: true}).split("\n");
-        for (const line of lines) {
-            if (!line.startsWith("data: ") || line.includes("[DONE]")) continue;
-            try {
-                const token = JSON.parse(line.replace("data: ", "")).choices[0].delta.content || "";
-                buffer += token;
-
-                // --- IMPROVED TAG DETECTION & BUFFER FLUSHING ---
-                if (buffer.includes("###START_AUDIO###")) {
-                    let parts = buffer.split("###START_AUDIO###");
-                    appendToken(currentBlock, parts[0]); // Flush everything before tag
-                    mode = 'ita';
-                    currentBlock = createBlock(botBubble, 'ita');
-                    buffer = parts[1] || "";
-                } 
-                else if (buffer.includes("###STOP_AUDIO###")) {
-                    let parts = buffer.split("###STOP_AUDIO###");
-                    appendToken(currentBlock, parts[0]); // CRITICAL: Flush the remaining Italian (e.g., "stai")
-                    triggerTTS(currentBlock, currentBlock.innerText);
-                    mode = 'sys';
-                    currentBlock = createBlock(botBubble, 'sys');
-                    buffer = parts[1] || "";
-                } 
-                else if (buffer.includes("@@@ENGLISH@@@")) {
-                    let parts = buffer.split("@@@ENGLISH@@@");
-                    appendToken(currentBlock, parts[0]);
-                    mode = 'eng';
-                    currentBlock = createBlock(botBubble, 'eng');
-                    buffer = parts[1] || "";
-                } 
-                else if (buffer.includes("@@@END_ENGLISH@@@")) {
-                    let parts = buffer.split("@@@END_ENGLISH@@@");
-                    appendToken(currentBlock, parts[0]);
-                    mode = 'sys';
-                    currentBlock = createBlock(botBubble, 'sys');
-                    buffer = parts[1] || "";
+            let tagMatch;
+            while ((tagMatch = buffer.match(/(###START_AUDIO###|###STOP_AUDIO###|@@@ENGLISH@@@|@@@END_ENGLISH@@@)/))) {
+                const tag = tagMatch[0];
+                const parts = buffer.split(tag);
+                
+                // Flush text before tag
+                if (parts[0]) appendToken(window.currentCBlock || createBlock(botBubble, 'sys'), parts[0]);
+                
+                if (tag === "###START_AUDIO###") {
+                    window.currentCBlock = createBlock(botBubble, 'ita');
+                } else if (tag === "###STOP_AUDIO###") {
+                    triggerTTS(window.currentCBlock, window.currentCBlock.innerText, signal);
+                    window.currentCBlock = createBlock(botBubble, 'sys');
+                } else if (tag === "@@@ENGLISH@@@") {
+                    window.currentCBlock = createBlock(botBubble, 'eng');
+                } else if (tag === "@@@END_ENGLISH@@@") {
+                    window.currentCBlock = createBlock(botBubble, 'sys');
                 }
+                buffer = parts.slice(1).join(tag);
+            }
 
-                // Normal streaming flush (keep small for responsiveness but safe from tags)
-                if (buffer.length > 10 && !buffer.includes("#") && !buffer.includes("@")) {
-                    appendToken(currentBlock, buffer);
-                    buffer = "";
-                }
-            } catch(e) {}
+            if (buffer.length > 15 && !buffer.includes("#") && !buffer.includes("@")) {
+                if (!window.currentCBlock) window.currentCBlock = createBlock(botBubble, 'sys');
+                appendToken(window.currentCBlock, buffer);
+                buffer = "";
+            }
         }
-    }
-    // FINAL FLUSH: Catch whatever is left at the very end of the stream
-    if (buffer) appendToken(currentBlock, buffer);
+        if (buffer) appendToken(window.currentCBlock || createBlock(botBubble, 'sys'), buffer);
+    } catch(e) { console.log("Stream stopped or error:", e); }
 }
+
 function createBlock(parent, type) {
     const el = document.createElement("span");
     el.className = type === 'ita' ? "ita-block loading" : (type === 'eng' ? "eng-block" : "sys-block");
@@ -207,46 +216,46 @@ function createBlock(parent, type) {
 function appendToken(block, text) {
     if (!text) return;
     const clean = text.replace(/[#@]/g, "");
-    
     if (block.innerText.length > 0) {
         const lastChar = block.innerText.slice(-1);
         const firstChar = clean[0];
-        // Only add space if we are bridging two distinct word characters
         if (/^[a-zA-Z0-9àèéìòùÀÈÉÌÒÙ]/.test(firstChar) && !/[\s'.,?!]/.test(lastChar)) {
             block.innerText += " ";
         }
     }
     block.innerText += clean;
 }
-async function triggerTTS(element, text) {
+
+async function triggerTTS(element, text, signal) {
     if (text.length > 3) addToVocab(text);
-    const res = await fetch("/tts_sentence", { 
-        method: "POST", headers: {"Content-Type": "application/json"}, 
-        body: JSON.stringify({ text, tutor: document.getElementById("tutorSelect").value }) 
-    });
-    const data = await res.json();
-    if (data.audio_url) {
-        element.classList.remove("loading");
-        element.classList.add("ready"); // Visual indicator that it's clickable
-        
-        // MANUAL PLAY ON CLICK ONLY
-        element.onclick = () => { 
-            stopAllAudio();
-            player.src = data.audio_url; 
-            player.play(); 
-            element.classList.remove("ready");
-            element.classList.add("playing");
-            currentPlayingBlock = element;
-            player.onended = () => { element.classList.remove("playing"); element.classList.add("ready"); currentPlayingBlock = null; };
-        };
-    }
+    try {
+        const res = await fetch("/tts_sentence", { 
+            method: "POST", headers: {"Content-Type": "application/json"}, 
+            body: JSON.stringify({ text, tutor: document.getElementById("tutorSelect").value }),
+            signal: signal
+        });
+        const data = await res.json();
+        if (data.audio_url) {
+            element.classList.remove("loading");
+            element.classList.add("ready");
+            element.onclick = () => { 
+                stopAllAudio();
+                player.src = data.audio_url; 
+                player.play(); 
+                element.classList.remove("ready");
+                element.classList.add("playing");
+                currentPlayingBlock = element;
+                player.onended = () => { element.classList.remove("playing"); element.classList.add("ready"); currentPlayingBlock = null; };
+            };
+        }
+    } catch(e) { console.log("TTS Generation cancelled."); }
 }
 
 function addToVocab(text) {
     const vocabList = document.getElementById("vocabList");
     const item = document.createElement("div");
     item.className = "vocab-item";
-    item.innerText = text.substring(0, 50) + "...";
+    item.innerText = text.length > 60 ? text.substring(0, 57) + "..." : text;
     vocabList.insertBefore(item, vocabList.firstChild);
 }
 
