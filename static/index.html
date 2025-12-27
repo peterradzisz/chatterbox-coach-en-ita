@@ -7,28 +7,19 @@
     <style>
         :root { --bg: #0f172a; --pan: #1e293b; --ita: #00d2ff; --sys: #f1f5f9; --acc: #38bdf8; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--sys); margin: 0; padding: 10px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
-        
         .side-col { flex: 1; background: #020617; padding: 20px; border-radius: 20px; border: 1px solid #334155; overflow-y: auto; display: none; }
         .main-col { flex: 3; display: flex; flex-direction: column; }
         @media (min-width: 800px) { .side-col { display: block; } }
-
         .container { background: var(--pan); padding: 20px; border-radius: 15px; border: 1px solid #334155; flex-grow: 1; display: flex; flex-direction: column; position: relative; }
         .top-btns { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 10; }
         .stop-btn { background: #f59e0b; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .reset-btn { background: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        
         .chat-history { flex-grow: 1; background: #020617; overflow-y: auto; padding: 20px; border-radius: 10px; margin: 10px 0; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 10px; }
-        
         .ita-block { display: block; font-size: 24px; font-weight: 800; color: var(--ita); padding: 15px 15px 45px 15px; border-radius: 10px; background: #0f172a; border: 2px solid #1e293b; cursor: pointer; position: relative; margin-bottom: 5px; }
         .ita-block.ready { border-color: #facc15; }
         .ita-block.playing { border-color: #22c55e; background: #064e3b; }
-        
-        .dl-btn { position: absolute; left: 10px; bottom: 10px; font-size: 11px; color: #94a3b8; background: #1e293b; border: 1px solid #334155; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; z-index: 5; }
-        .dl-btn:hover { background: #334155; color: #fff; }
+        .dl-btn { position: absolute; left: 10px; bottom: 10px; font-size: 11px; color: #94a3b8; background: #1e293b; border: 1px solid #334155; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; }
         .play-hint { position: absolute; right: 12px; bottom: 10px; font-size: 11px; color: #facc15; }
-        
-        .sys-block { display: block; font-size: 15px; color: #cbd5e1; }
-        
         select, textarea { background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; width: 100%; box-sizing: border-box; padding: 10px; font-family: inherit; }
         label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 4px; }
         .btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; background: var(--acc); color: #0f172a; cursor: pointer; }
@@ -42,18 +33,14 @@
         <div class="container">
             <div class="top-btns"><button class="stop-btn" onclick="stopWork()">⏹ STOP</button><button class="reset-btn" onclick="resetAll()">♻ RESET</button></div>
             <h2 style="margin:0 0 10px 0; color:var(--acc);">🌍 Tutor Master 3090</h2>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div style="grid-template-columns: 1fr 1fr; display:grid; gap:10px; margin-bottom:10px;">
                 <div><label>Voice</label><select id="tutorSelect"></select></div>
                 <div><label>Speaking...</label>
                     <select id="sttLang">
                         <option value="en">English</option><option value="it" selected>Italian</option>
                         <option value="pl">Polish</option><option value="fr">French</option>
                         <option value="de">German</option><option value="es">Spanish</option>
-                        <option value="pt">Portuguese</option><option value="tr">Turkish</option>
-                        <option value="ru">Russian</option><option value="nl">Dutch</option>
-                        <option value="cs">Czech</option><option value="ar">Arabic</option>
-                        <option value="zh-cn">Chinese</option><option value="ja">Japanese</option>
-                        <option value="hu">Hungarian</option><option value="ko">Korean</option>
+                        <option value="ja">Japanese</option><option value="zh-cn">Chinese</option>
                     </select>
                 </div>
             </div>
@@ -74,9 +61,6 @@ let mediaRecorder, audioChunks = [], currentAbortController = null;
 const win = document.getElementById("chatWindow"), textInput = document.getElementById("input"), mic = document.getElementById('micBtn'), player = document.getElementById("player");
 let currentPlayingBlock = null;
 
-// Clean Cleanup
-window.onbeforeunload = () => { if(currentAbortController) currentAbortController.abort(); };
-
 async function stopWork() { 
     if(currentAbortController) currentAbortController.abort(); 
     player.pause(); 
@@ -96,7 +80,6 @@ window.onload = init;
 
 async function loadTemplate(f) { if(!f) return; const r = await fetch(`/template/${f}`); const d = await r.json(); if(d.content) document.getElementById("system").value = d.content; }
 
-// Mic Input
 navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
     mediaRecorder = new MediaRecorder(s);
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
@@ -110,50 +93,48 @@ function stopRec(e) { if(e.type==='touchend') e.preventDefault(); if(mediaRecord
 mic.addEventListener('mousedown', startRec); mic.addEventListener('touchstart', startRec);
 mic.addEventListener('mouseup', stopRec); mic.addEventListener('touchend', stopRec);
 
-// Streaming Logic
 async function send() {
     const t = textInput.value; if(!t) return;
     currentAbortController = new AbortController(); const sig = currentAbortController.signal;
     addMessage(t, 'user-msg'); textInput.value = "";
     const bubble = document.createElement("div"); win.appendChild(bubble);
-    let curBlock = null;
+    let curBlock = null, buf = "";
 
     try {
         const r = await fetch("/chat_stream", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ text: t, system: document.getElementById("system").value }), signal: sig });
-        const reader = r.body.getReader(); const dec = new TextDecoder(); 
-        let buf = "";
-
+        const reader = r.body.getReader(); const dec = new TextDecoder();
+        
         while (true) {
             const { done, value } = await reader.read(); if(done) break;
             const chunk = dec.decode(value, {stream:true});
             const lines = chunk.split("\n");
             
             for(let line of lines) {
-                line = line.trim();
-                if(!line.startsWith("data: ") || line.includes("[DONE]")) continue;
-                
+                if(!line.trim().startsWith("data: ") || line.includes("[DONE]")) continue;
                 try {
-                    // CORRECT PARSING of SSE JSON
-                    const json = JSON.parse(line.substring(6));
+                    const json = JSON.parse(line.trim().substring(6));
                     const token = json.choices[0].delta.content || "";
                     buf += token;
 
-                    // Token Logic
                     let tag;
                     while((tag = buf.match(/(###START_AUDIO###|###STOP_AUDIO###)/))) {
                         const parts = buf.split(tag[0]);
                         if(parts[0]) appendToken(curBlock || (curBlock=createBlock(bubble,'sys')), parts[0]);
                         
-                        if(tag[0]==="###START_AUDIO###") curBlock=createBlock(bubble,'ita');
-                        else if(tag[0]==="###STOP_AUDIO###") { triggerTTS(curBlock, sig); curBlock=createBlock(bubble,'sys'); }
-                        
+                        if(tag[0]==="###START_AUDIO###") {
+                            curBlock = createBlock(bubble,'ita');
+                        } else if(tag[0]==="###STOP_AUDIO###") {
+                            // NEW: Await the TTS request to guarantee sequence
+                            const targetBlock = curBlock;
+                            await triggerTTS(targetBlock, sig);
+                            curBlock = createBlock(bubble,'sys');
+                        }
                         buf = parts.slice(1).join(tag[0]);
                     }
                     if(buf.length > 5 && !buf.includes("#")) { 
                         appendToken(curBlock || (curBlock=createBlock(bubble,'sys')), buf); buf = ""; 
                     }
-
-                } catch(e) { console.log("Stream parse error", e); }
+                } catch(e) {}
             }
         }
         if(buf) appendToken(curBlock || createBlock(bubble,'sys'), buf);
@@ -164,32 +145,29 @@ function createBlock(p, t) { const e = document.createElement("span"); e.classNa
 function appendToken(b, t) { const c = t.replace(/[#@]/g, ""); b.innerText += c; win.scrollTop = win.scrollHeight; }
 
 async function triggerTTS(el, sig) {
-    const txt = el.innerText; if(txt.length < 2) return;
+    const txt = el.innerText.trim(); if(txt.length < 2) return;
     addToVocab(txt);
     
-    // Pass 'sttLang' value as 'language' to ensure correct accent/phonetics
-    const r = await fetch("/tts_sentence", { 
-        method:"POST", headers:{"Content-Type":"application/json"}, 
-        body:JSON.stringify({ 
-            text: txt, 
-            tutor: document.getElementById("tutorSelect").value,
-            language: document.getElementById("sttLang").value 
-        }), 
-        signal: sig 
-    });
-    
-    const d = await r.json();
-    if(d.audio_url) {
-        el.classList.add("ready");
-        const h = document.createElement("div"); h.className="play-hint"; h.innerText="▶ Play"; el.appendChild(h);
-        
-        // Download Button
-        const dl = document.createElement("a"); dl.className="dl-btn"; dl.innerText="💾 Save MP3"; 
-        dl.href=`/download_mp3/${d.audio_url.split('/').pop()}`; 
-        dl.setAttribute('download', ''); dl.onclick=e=>e.stopPropagation(); el.appendChild(dl);
-        
-        el.onclick = () => { player.pause(); if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing"); player.src=d.audio_url; player.play(); el.classList.add("playing"); currentPlayingBlock=el; };
-    }
+    // Create a specific controller for this TTS fetch only
+    const ttsController = new AbortController();
+    const ttsSig = ttsController.signal;
+
+    try {
+        const r = await fetch("/tts_sentence", { 
+            method:"POST", headers:{"Content-Type":"application/json"}, 
+            body:JSON.stringify({ text: txt, tutor: document.getElementById("tutorSelect").value, language: document.getElementById("sttLang").value }), 
+            signal: sig // Links back to the master chat stop button
+        });
+        const d = await r.json();
+        if(d.audio_url) {
+            el.classList.add("ready");
+            const h = document.createElement("div"); h.className="play-hint"; h.innerText="▶ Play"; el.appendChild(h);
+            const dl = document.createElement("a"); dl.className="dl-btn"; dl.innerText="💾 Save MP3"; 
+            dl.href=`/download_mp3/${d.audio_url.split('/').pop()}`; 
+            dl.setAttribute('download', ''); dl.onclick=e=>e.stopPropagation(); el.appendChild(dl);
+            el.onclick = () => { player.pause(); if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing"); player.src=d.audio_url; player.play(); el.classList.add("playing"); currentPlayingBlock=el; };
+        }
+    } catch(e) {}
 }
 function addToVocab(t) { const l = document.getElementById("vocabList"); const i = document.createElement("div"); i.className="vocab-item"; i.innerText=t.length > 60 ? t.substring(0,57)+"..." : t; l.insertBefore(i, l.firstChild); }
 function addMessage(t, c) { const d = document.createElement("div"); d.innerText = t; d.style.padding = "10px"; if (c === 'user-msg') { d.style.background = "#334155"; d.style.borderRadius = "10px"; d.style.alignSelf = "flex-end"; d.style.maxWidth = "80%"; d.style.marginLeft = "auto"; d.style.marginBottom = "20px"; } win.appendChild(d); }

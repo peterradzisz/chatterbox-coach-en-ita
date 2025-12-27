@@ -14,13 +14,14 @@ import subprocess
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context, send_file
 from pydub import AudioSegment
 
-# --- LOGGING SETUP ---
+# --- VERBOSE LOGGING ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
+
+# Suppress noise
 warnings.filterwarnings("ignore")
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 
-# --- PATHS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, 'static')
 AUDIO_DIR = os.path.join(BASE_DIR, "audio")
@@ -31,28 +32,30 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 for d in [AUDIO_DIR, TUTOR_DIR, CACHE_DIR, STATIC_DIR, TEMPLATES_DIR]: 
     os.makedirs(d, exist_ok=True)
 
+# Global Abort Event
 tts_abort_event = threading.Event()
 gpu_lock = threading.Lock()
 
 def startup_cleanup():
-    logger.info("🧹 STARTUP: Cleaning audio directory...")
+    logger.info("🧹 Startup Cleanup: Clearing /audio folder...")
     for f in os.listdir(AUDIO_DIR):
         try: os.unlink(os.path.join(AUDIO_DIR, f))
         except: pass
+
 startup_cleanup()
 
 def wav_to_mp3(wav_path, mp3_path):
+    logger.info(f"ffmpeg 🛠️ Converting {os.path.basename(wav_path)} to MP3...")
     try:
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav_path, 
                        "-vn", "-acodec", "libmp3lame", "-ab", "160k", mp3_path], check=True)
-    except Exception as e:
-        logger.error(f"⚠️ FFmpeg Error: {e}")
+    except Exception as e: logger.error(f"FFmpeg Error: {e}")
 
 app = Flask(__name__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# --- ENGINE LOAD ---
-logger.info(f"--- 🚀 LOADING ENGINE ({device.upper()}) ---")
+# --- ENGINES ---
+logger.info(f"--- 🚀 STARTING ENGINE ({device.upper()}) ---")
 from chatterbox.mtl_tts import ChatterboxMultilingualTTS
 from faster_whisper import WhisperModel
 
@@ -64,7 +67,7 @@ def load_tutor_memory(tutor_name):
     ref_wav_path = os.path.join(TUTOR_DIR, f"{tutor_name}.wav")
     if os.path.exists(cache_path): return torch.load(cache_path, map_location=device)
     if os.path.exists(ref_wav_path):
-        logger.info(f"🎙️ Encoding Voice: {tutor_name}")
+        logger.info(f"🎙️ Creating Embedding: {tutor_name}")
         tts.prepare_conditionals(ref_wav_path, exaggeration=0.7)
         torch.save(tts.conds, cache_path)
         return tts.conds
@@ -83,20 +86,14 @@ def get_templates(): return jsonify({"templates": [f for f in os.listdir(TEMPLAT
 
 @app.route("/template/<path:filename>")
 def get_template(filename):
-    with open(os.path.join(TEMPLATES_DIR, filename), 'r', encoding='utf-8') as f: return jsonify({"content": f.read()})
+    with open(os.path.join(TEMPLATES_DIR, filename), 'r', encoding='utf-8') as f:
+        return jsonify({"content": f.read()})
 
 @app.route("/abort_tts", methods=["POST"])
 def abort_tts():
     tts_abort_event.set()
-    logger.warning("🛑 ABORT: TTS Generation Cancelled")
+    logger.warning("🛑 STOP: TTS generation aborted by user.")
     return jsonify({"status": "aborted"})
-
-@app.route("/clear_audio", methods=["POST"])
-def clear_audio():
-    for f in os.listdir(AUDIO_DIR):
-        try: os.unlink(os.path.join(AUDIO_DIR, f))
-        except: pass
-    return jsonify({"success": True})
 
 @app.route("/stt", methods=["POST"])
 def speech_to_text():
@@ -104,7 +101,7 @@ def speech_to_text():
     try:
         request.files['audio'].save(temp)
         lang = request.form.get('language', 'it')
-        logger.info(f"👂 STT Processing ({lang})...")
+        logger.info(f"👂 STT [{lang}]...")
         segments, _ = stt_model.transcribe(temp, language=lang, beam_size=1)
         text = "".join([s.text for s in segments]).strip()
         logger.info(f"📝 Heard: \"{text}\"")
@@ -115,6 +112,7 @@ def speech_to_text():
 @app.route("/chat_stream", methods=["POST"])
 def chat_stream():
     data = request.json
+    logger.info("💬 LLM: Requesting stream...")
     payload = {"model": "local-model", "messages": [{"role": "system", "content": data.get("system", "")}, {"role": "user", "content": data.get("text", "")}], "temperature": 0.8, "stream": True}
     @stream_with_context
     def generate():
@@ -129,54 +127,53 @@ def chat_stream():
 def tts_sentence():
     tts_abort_event.clear()
     data = request.json
-    raw_text = data.get("text", "")
+    raw_text = data.get("text", "").strip()
     tutor = data.get("tutor", "sofia")
     lang = data.get("language", "it")
 
-    # Cleaning: Removing likely hallucinated translation headers
-    clean = re.split(r'\(|Translation:|\nTłumaczenie:|\nEnglish:|\nItalian:', raw_text)[0].strip()
+    logger.info(f"🔊 TTS [{lang}]: \"{raw_text[:40]}...\"")
+
+    clean = re.split(r'\(|Translation:|\nTłumaczenie:|\nEnglish:', raw_text)[0].strip()
     final = re.sub(r'\s+', ' ', re.sub(r"[^\w\s',.\?!\-]", ' ', clean)).strip()
 
-    if not final: return jsonify({"error": "Empty text"}), 400
-    
+    if not final: return jsonify({"error": "No text"}), 400
+
     try:
         with gpu_lock:
             if tts_abort_event.is_set(): return jsonify({"error": "Aborted"}), 499
-            
-            logger.info(f"🔊 Generating ({lang}): \"{final[:40]}...\"")
             tts.conds = load_tutor_memory(tutor)
-            
             wav = tts.generate(final, language_id=lang, cfg_weight=0.3, exaggeration=0.6)
             
             if tts_abort_event.is_set(): return jsonify({"error": "Aborted"}), 499
-            
             wav_norm = (wav.squeeze().detach().cpu().numpy() * 32767).astype(np.int16)
             seg = AudioSegment(wav_norm.tobytes(), frame_rate=24000, sample_width=2, channels=1)
 
-        fname = f"{uuid.uuid4()}"
-        wav_path = os.path.join(AUDIO_DIR, f"{fname}.wav")
-        mp3_path = os.path.join(AUDIO_DIR, f"{fname}.mp3")
+        fid = str(uuid.uuid4())
+        w_path = os.path.join(AUDIO_DIR, f"{fid}.wav")
+        m_path = os.path.join(AUDIO_DIR, f"{fid}.mp3")
+        seg.export(w_path, format="wav")
+        wav_to_mp3(w_path, m_path)
         
-        seg.export(wav_path, format="wav")
-        wav_to_mp3(wav_path, mp3_path)
-        
-        logger.info(f"✅ Audio Ready: {fname}.mp3")
-        return jsonify({"audio_url": f"/audio/{fname}.wav"})
+        logger.info(f"✅ Success: {fid}.mp3")
+        return jsonify({"audio_url": f"/audio/{fid}.wav"})
     except Exception as e:
-        logger.error(f"❌ TTS Error: {e}")
+        logger.error(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/download_mp3/<path:filename>")
 def download_mp3(filename):
-    # Filename comes in as .wav, swap to .mp3
     mp3_file = os.path.join(AUDIO_DIR, filename.replace(".wav", ".mp3"))
-    if not os.path.exists(mp3_file): return "File not found", 404
-    return send_file(mp3_file, as_attachment=True, download_name=f"Lesson_{filename.replace('.wav','.mp3')}")
+    return send_file(mp3_file, as_attachment=True, download_name=f"Audio_{filename.replace('.wav','.mp3')}")
 
 @app.route("/audio/<path:fname>")
 def serve_audio(fname): return send_from_directory(AUDIO_DIR, fname)
 
+@app.route("/clear_audio", methods=["POST"])
+def clear_api():
+    for f in os.listdir(AUDIO_DIR): os.unlink(os.path.join(AUDIO_DIR, f))
+    return jsonify({"success": True})
+
 if __name__ == "__main__":
     ip = socket.gethostbyname(socket.gethostname())
-    print(f"\n🌍 SERVER RUNNING AT: http://{ip}:5000\n")
+    logger.info(f"🚀 SERVER LIVE: http://{ip}:5000")
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
