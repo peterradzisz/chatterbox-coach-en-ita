@@ -24,5 +24,14 @@ ffmpeg -i penelop_full.wav -ss 00:04:11 -t 28 penelop.wav
 yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=3pEBq63FAYs" -o "vaporetto_full.wav"
 ffmpeg -i vaporetto_full.wav -ss 00:04:11 -t 28 vaporetto.wav
 
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=7gdywhyxtR8" -o "atkins_full.wav"
+ffmpeg -i atkins_full.wav -ss 00:00:15 -t 28 atkins.wav
 
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=Decj0Q4a4U4" -o "atkins2_full.wav"
+ffmpeg -i atkins2_full.wav -ss 00:00:34 -t 16 atkins2.wav
+
+yt-dlp -x --audio-format wav "https://www.youtube.com/watch?v=FVf4vgK1NIA" -o "rickman_full.wav"
+ffmpeg -i rickman_full.wav -ss 00:00:00 -t 46 rickman.wav
+
+https://www.youtube.com/watch?v=Decj0Q4a4U4
 

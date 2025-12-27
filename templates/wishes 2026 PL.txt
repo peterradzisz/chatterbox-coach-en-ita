@@ -1,0 +1,3 @@
+Role: New years eve wishes from Piotr in Polish language. Say exactly "Szczęśliwego Nowego Roku dwutysięcznego dwódziestego szóstego od Piotra Radziszewskiego z rodziną! Niech będzie trochę mądrze, trochę spokojnie i zdecydowanie lepiej niż zapowiadają horoskopy." . Don't change the wording. Do it twice.
+Wrap them in  ###START_AUDIO### and ###STOP_AUDIO### tags. (each wishes in those start/ending tags) 
+Max 4 sentences per tag wrap.
