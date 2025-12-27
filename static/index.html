@@ -18,11 +18,20 @@
 
         .chat-history { flex-grow: 1; background: #020617; overflow-y: auto; padding: 20px; border-radius: 10px; margin: 10px 0; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 10px; }
         
-        .ita-block { display: block; font-size: 24px; font-weight: 800; color: var(--ita); padding: 15px; border-radius: 10px; background: #0f172a; border: 2px solid #1e293b; cursor: pointer; }
-        .ita-block.ready { border-color: #facc15; background: #422006; }
+        .ita-block { display: block; font-size: 24px; font-weight: 800; color: var(--ita); padding: 15px 15px 35px 15px; border-radius: 10px; background: #0f172a; border: 2px solid #1e293b; cursor: pointer; position: relative; }
+        .ita-block.ready { border-color: #facc15; }
         .ita-block.playing { border-color: #22c55e; background: #064e3b; }
         .ita-block.loading { opacity: 0.5; border-style: dashed; }
         
+        /* Fixed Download Button UI */
+        .dl-btn { 
+            position: absolute; left: 10px; bottom: 8px; font-size: 11px; color: #94a3b8; 
+            background: #1e293b; border: 1px solid #334155; padding: 4px 8px; border-radius: 4px;
+            text-decoration: none; font-weight: bold;
+        }
+        .dl-btn:hover { background: #334155; color: white; }
+        .play-hint { position: absolute; right: 10px; bottom: 8px; font-size: 11px; color: #facc15; }
+
         .eng-block { display: block; font-size: 16px; color: var(--eng); font-style: italic; border-left: 3px solid #475569; padding-left: 10px; margin: 5px 0; }
         .sys-block { display: block; font-size: 15px; color: #cbd5e1; }
         
@@ -34,8 +43,7 @@
         .recording { background: #ef4444 !important; color: white; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         .vocab-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid #38bdf8; font-size: 14px; color: #e2e8f0; }
-        
-        /* New Template Select Style */
+
         .template-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         #templateSelect { width: auto; padding: 5px; font-size: 12px; background: #0f172a; border: 1px solid #334155; }
     </style>
@@ -70,7 +78,8 @@
             <textarea id="system" rows="2">Role: Professional Italian Tutor. Wrap Italian in ###START_AUDIO### and ###STOP_AUDIO###. Wrap English in @@@ENGLISH@@@ and @@@END_ENGLISH@@@.</textarea>
 
             <div class="chat-history" id="chatWindow"></div>
-            <textarea id="input" rows="2" placeholder="Type or hold 'Speak' button..."></textarea>
+            
+            <textarea id="input" rows="2" placeholder="Talk or type..."></textarea>
             
             <div style="display:flex; gap:10px; margin-top:10px;">
                 <button id="micBtn" class="btn" style="flex:1; background:#475569; color:white;">🎤 Speak</button>
@@ -85,28 +94,34 @@ let mediaRecorder, audioChunks = [], currentAbortController = null;
 const win = document.getElementById("chatWindow"), textInput = document.getElementById("input"), mic = document.getElementById('micBtn'), player = document.getElementById("player");
 let currentPlayingBlock = null;
 
-function stopWork() { if(currentAbortController) currentAbortController.abort(); player.pause(); player.currentTime = 0; if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing"); }
-async function resetAll() { stopWork(); win.innerHTML = ""; textInput.value = ""; document.getElementById("vocabList").innerHTML = ""; try { await fetch('/clear_audio', { method: 'POST' }); } catch(e) {} }
+// REFRESH SAFETY
+window.addEventListener('beforeunload', function() {
+    navigator.sendBeacon('/clear_audio');
+    if (currentAbortController) currentAbortController.abort();
+});
+
+function stopWork() { 
+    if(currentAbortController) currentAbortController.abort(); 
+    player.pause(); player.currentTime = 0; 
+    if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing"); 
+}
+
+async function resetAll() { 
+    stopWork(); win.innerHTML = ""; textInput.value = ""; document.getElementById("vocabList").innerHTML = ""; 
+    try { await fetch('/clear_audio', { method: 'POST' }); } catch(e) {} 
+}
 
 async function init() {
-    // Load Voices
     try {
-        const res = await fetch('/get_tutors');
-        const data = await res.json();
-        const select = document.getElementById("tutorSelect");
-        data.tutors.forEach(name => {
-            const opt = document.createElement("option"); opt.value = name; opt.innerText = name.toUpperCase(); select.appendChild(opt);
-        });
+        const res = await fetch('/get_tutors'); const data = await res.json();
+        const select = document.getElementById("tutorSelect"); select.innerHTML="";
+        data.tutors.forEach(name => { const opt = document.createElement("option"); opt.value = name; opt.innerText = name.toUpperCase(); select.appendChild(opt); });
     } catch(e){}
 
-    // Load Templates
     try {
-        const res = await fetch('/get_templates');
-        const data = await res.json();
+        const res = await fetch('/get_templates'); const data = await res.json();
         const tSelect = document.getElementById("templateSelect");
-        data.templates.forEach(fname => {
-            const opt = document.createElement("option"); opt.value = fname; opt.innerText = fname.replace('.txt',''); tSelect.appendChild(opt);
-        });
+        data.templates.forEach(fname => { const opt = document.createElement("option"); opt.value = fname; opt.innerText = fname.replace('.txt',''); tSelect.appendChild(opt); });
     } catch(e){}
 }
 window.onload = init;
@@ -118,7 +133,7 @@ async function loadTemplate(filename) {
     if(data.content) document.getElementById("system").value = data.content;
 }
 
-// MICROPHONE
+// MICROPHONE (Touch Fix)
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
@@ -130,11 +145,13 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         const data = await res.json();
         textInput.value = data.text;
     };
-});
-mic.addEventListener('mousedown', () => { audioChunks=[]; mediaRecorder.start(); mic.classList.add('recording'); });
-mic.addEventListener('touchstart', (e) => { e.preventDefault(); audioChunks=[]; mediaRecorder.start(); mic.classList.add('recording'); });
-mic.addEventListener('mouseup', () => { if(mediaRecorder.state==='recording') mediaRecorder.stop(); mic.classList.remove('recording'); });
-mic.addEventListener('touchend', (e) => { e.preventDefault(); if(mediaRecorder.state==='recording') mediaRecorder.stop(); mic.classList.remove('recording'); });
+}).catch(e => { mic.innerText="Blocked (Flags)"; mic.disabled=true; });
+
+function startRec(e) { if(e.type==='touchstart') e.preventDefault(); audioChunks=[]; mediaRecorder.start(); mic.classList.add('recording'); }
+function stopRec(e) { if(e.type==='touchend') e.preventDefault(); if(mediaRecorder.state==='recording') mediaRecorder.stop(); mic.classList.remove('recording'); }
+
+mic.addEventListener('mousedown', startRec); mic.addEventListener('touchstart', startRec);
+mic.addEventListener('mouseup', stopRec); mic.addEventListener('touchend', stopRec);
 
 // CHAT
 async function send() {
@@ -202,7 +219,25 @@ async function triggerTTS(element, text, signal) {
         const data = await res.json();
         if(data.audio_url) {
             element.classList.remove("loading"); element.classList.add("ready");
-            element.onclick = () => { player.pause(); if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing"); player.src = data.audio_url; player.play(); element.classList.add("playing"); currentPlayingBlock = element; };
+            
+            // Play Hint
+            const hint = document.createElement("div"); hint.className="play-hint"; hint.innerText="▶ Play";
+            element.appendChild(hint);
+
+            // Download Button
+            const dl = document.createElement("a");
+            dl.className = "dl-btn";
+            dl.innerText = "💾 Save MP3";
+            const fname = data.audio_url.split('/').pop();
+            dl.href = `/download_mp3/${fname}`;
+            dl.onclick = (e) => e.stopPropagation(); // Don't play when clicking download
+            element.appendChild(dl);
+
+            element.onclick = () => { 
+                player.pause(); if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing");
+                player.src = data.audio_url; player.play(); 
+                element.classList.add("playing"); currentPlayingBlock = element; 
+            };
             player.onended = () => { element.classList.remove("playing"); };
         }
     } catch(e) {}

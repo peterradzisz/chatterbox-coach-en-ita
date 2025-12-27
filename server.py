@@ -11,8 +11,7 @@ import numpy as np
 import re
 import threading
 import socket
-import shutil
-from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context, send_file
 from pydub import AudioSegment
 
 # --- SETUP & LOGGING ---
@@ -20,17 +19,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
-# --- ABSOLUTE PATH DEFINITIONS ---
-# This ensures we always find folders relative to where server.py is saved
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, 'static')
+AUDIO_DIR = os.path.join(BASE_DIR, "audio")
+TUTOR_DIR = os.path.join(BASE_DIR, "tutors")
+CACHE_DIR = os.path.join(BASE_DIR, "voice_cache")
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 
-STATIC_DIR = os.path.join(BASE_DIR, 'static')       # Holds index.html, voiceconf.json
-AUDIO_DIR = os.path.join(BASE_DIR, "audio")         # Holds generated .wavs
-TUTOR_DIR = os.path.join(BASE_DIR, "tutors")        # Holds source .wav voices
-CACHE_DIR = os.path.join(BASE_DIR, "voice_cache")   # Holds .pt embeddings
-TEMPLATES_DIR = os.path.join(BASE_DIR, "templates") # Holds .txt prompt templates
-
-# Create missing directories automatically
 for d in [AUDIO_DIR, TUTOR_DIR, CACHE_DIR, STATIC_DIR, TEMPLATES_DIR]: 
     os.makedirs(d, exist_ok=True)
 
@@ -69,7 +64,6 @@ def load_tutor_memory(tutor_name):
     return None
 
 def get_voice_params(tutor_name):
-    # Loads voiceconf.json from the STATIC folder
     config_path = os.path.join(STATIC_DIR, "voiceconf.json")
     defaults = {"exag": 0.6, "cfg": 0.3}
     if os.path.exists(config_path):
@@ -81,43 +75,30 @@ def get_voice_params(tutor_name):
 # --- ROUTES ---
 
 @app.route("/")
-def index():
-    """Serves the main UI."""
-    return send_from_directory(STATIC_DIR, 'index.html')
+def index(): return send_from_directory(STATIC_DIR, 'index.html')
 
 @app.route("/get_tutors")
 def get_tutors():
-    """Returns list of available voice files."""
     files = [f.replace('.wav', '') for f in os.listdir(TUTOR_DIR) if f.endswith('.wav')]
     return jsonify({"tutors": files})
 
-# --- TEMPLATE ROUTES (FIXED) ---
 @app.route("/get_templates")
 def get_templates():
-    """Returns list of .txt files in the templates folder."""
     try:
         files = [f for f in os.listdir(TEMPLATES_DIR) if f.endswith('.txt')]
         return jsonify({"templates": files})
-    except Exception as e:
-        logger.error(f"Template Error: {e}")
-        return jsonify({"templates": []})
+    except: return jsonify({"templates": []})
 
 @app.route("/template/<path:filename>")
 def get_template_content(filename):
-    """Reads the content of a specific template file."""
     try:
         safe_path = os.path.join(TEMPLATES_DIR, filename)
-        # Security check to ensure the file is actually inside TEMPLATES_DIR
-        if os.path.abspath(safe_path).startswith(os.path.abspath(TEMPLATES_DIR)):
-            with open(safe_path, 'r', encoding='utf-8') as f:
-                return jsonify({"content": f.read()})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-# -------------------------------
+        with open(safe_path, 'r', encoding='utf-8') as f:
+            return jsonify({"content": f.read()})
+    except Exception as e: return jsonify({"error": str(e)}), 500
 
 @app.route("/clear_audio", methods=["POST"])
 def clear_audio():
-    """Wipes audio folder (RESET button)."""
     try:
         count = 0
         for f in os.listdir(AUDIO_DIR):
@@ -163,7 +144,6 @@ def tts_sentence():
     tutor_name = data.get("tutor", "sofia")
     params = get_voice_params(tutor_name)
 
-    # Clean text
     it_text = re.split(r'\(|Translation:|\nEnglish:', raw_text)[0].strip()
     it_text = re.sub(r"[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ',.\?!\s]", ' ', it_text)
     final_text = re.sub(r'\s+', ' ', it_text).strip()
@@ -185,15 +165,32 @@ def tts_sentence():
         return jsonify({"audio_url": f"/audio/{filename}"})
     except Exception as e: return jsonify({"error": str(e)}), 500
 
+# --- MP3 DOWNLOAD ROUTE (160kbps) ---
+@app.route("/download_mp3/<filename>")
+def download_mp3(filename):
+    wav_path = os.path.join(AUDIO_DIR, filename)
+    if not os.path.exists(wav_path):
+        return "File not found", 404
+    
+    mp3_filename = filename.replace(".wav", ".mp3")
+    mp3_path = os.path.join(AUDIO_DIR, mp3_filename)
+    
+    # Only convert if it hasn't been done yet
+    if not os.path.exists(mp3_path):
+        audio = AudioSegment.from_wav(wav_path)
+        # Export as 160kbps MP3
+        audio.export(mp3_path, format="mp3", bitrate="160k")
+    
+    return send_file(mp3_path, as_attachment=True, download_name=f"Lesson_{mp3_filename}")
+
 @app.route("/audio/<path:fname>")
 def serve_audio(fname): return send_from_directory(AUDIO_DIR, fname)
 
 if __name__ == "__main__":
     local_ip = get_local_ip()
-    port = 5000
-    print(f"\n🌍 NETWORK ACCESS: http://{local_ip}:{port}\n")
+    print(f"\n🌍 NETWORK ACCESS: http://{local_ip}:5000\n")
     try:
         import qrcode
-        qr = qrcode.QRCode(); qr.add_data(f"http://{local_ip}:{port}"); qr.print_ascii()
+        qr = qrcode.QRCode(); qr.add_data(f"http://{local_ip}:5000"); qr.print_ascii()
     except ImportError: pass
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
