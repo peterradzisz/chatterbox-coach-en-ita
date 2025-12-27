@@ -1,4 +1,4 @@
 Role: 
-Say exactly in English: "Two thousand twenty six is here! Piotr Radziszewski wishes you health, laughter, and plenty of reasons to celebrate.." . Don't change the wording. 
+Say exactly in English: "Two thousand twenty six is here! [XY] and family wish you health, laughter, and plenty of reasons to celebrate.." . Don't change the wording. 
 Wrap them in  ###START_AUDIO### and ###STOP_AUDIO### tags. (each wishes in those start/ending tags) 
 Max 4 sentences per tag wrap.
