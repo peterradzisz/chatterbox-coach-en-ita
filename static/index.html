@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tutor Pro 3090 - Master</title>
+    <title>Tutor Pro 3090 - Master Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
     <style>
         :root { --bg: #0f172a; --pan: #1e293b; --ita: #00d2ff; --sys: #f1f5f9; --acc: #38bdf8; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--sys); margin: 0; padding: 10px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
@@ -15,11 +16,22 @@
         .stop-btn { background: #f59e0b; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .reset-btn { background: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .chat-history { flex-grow: 1; background: #020617; overflow-y: auto; padding: 20px; border-radius: 10px; margin: 10px 0; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Blocks */
         .ita-block { display: block; font-size: 24px; font-weight: 800; color: var(--ita); padding: 15px 15px 45px 15px; border-radius: 10px; background: #0f172a; border: 2px solid #1e293b; cursor: pointer; position: relative; margin-bottom: 5px; }
         .ita-block.ready { border-color: #facc15; }
         .ita-block.playing { border-color: #22c55e; background: #064e3b; }
-        .dl-btn { position: absolute; left: 10px; bottom: 10px; font-size: 11px; color: #94a3b8; background: #1e293b; border: 1px solid #334155; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; }
+        .dl-btn { position: absolute; left: 10px; bottom: 10px; font-size: 11px; color: #94a3b8; background: #1e293b; border: 1px solid #334155; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; z-index: 5; }
         .play-hint { position: absolute; right: 12px; bottom: 10px; font-size: 11px; color: #facc15; }
+        .eng-block { display: block; font-size: 16px; color: #94a3b8; font-style: italic; border-left: 3px solid #475569; padding-left: 10px; margin: 5px 0; }
+        .sys-block { display: block; font-size: 15px; color: #cbd5e1; }
+
+        /* 2️⃣ Markdown Table Styling */
+        table { border-collapse: collapse; margin: 10px 0; width: 100%; font-size: 14px; }
+        th, td { border: 1px solid #334155; padding: 8px; text-align: left; }
+        th { background: #1e293b; color: var(--acc); }
+        code { background: #1e293b; padding: 2px 4px; border-radius: 4px; color: #f472b6; }
+
         select, textarea { background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; width: 100%; box-sizing: border-box; padding: 10px; font-family: inherit; }
         label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 4px; }
         .btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; background: var(--acc); color: #0f172a; cursor: pointer; }
@@ -40,7 +52,12 @@
                         <option value="en">English</option><option value="it" selected>Italian</option>
                         <option value="pl">Polish</option><option value="fr">French</option>
                         <option value="de">German</option><option value="es">Spanish</option>
-                        <option value="ja">Japanese</option><option value="zh-cn">Chinese</option>
+                        <option value="pt">Portuguese</option><option value="tr">Turkish</option>
+                        <option value="ru">Russian</option><option value="nl">Dutch</option>
+                        <option value="cs">Czech</option><option value="ar">Arabic</option>
+                        <option value="zh-cn">Chinese</option><option value="ja">Japanese</option>
+                        <option value="hu">Hungarian</option><option value="ko">Korean</option>
+                        <option value="hi">Hindi</option>
                     </select>
                 </div>
             </div>
@@ -48,9 +65,9 @@
                 <label>System Prompt</label>
                 <select id="templateSelect" style="width:auto; height:25px; font-size:11px;" onchange="loadTemplate(this.value)"><option value="">Templates...</option></select>
             </div>
-            <textarea id="system" rows="2">Professional Multi-language Tutor. Use ###START_AUDIO### and ###STOP_AUDIO### tags.</textarea>
+            <textarea id="system" rows="2">Professional Multi-language Tutor. Use START AUDIO and STOP AUDIO tags.</textarea>
             <div class="chat-history" id="chatWindow"></div>
-            <textarea id="input" rows="2" placeholder="Start your lesson..."></textarea>
+            <textarea id="input" rows="2" placeholder="Start your lesson... (Enter to send)"></textarea>
             <div style="display:flex; gap:10px; margin-top:10px;"><button id="micBtn" class="btn" style="flex:1; background:#475569; color:white;">🎤 Speak</button><button onclick="send()" class="btn" style="flex:2;">Send Message</button></div>
         </div>
     </div>
@@ -80,6 +97,11 @@ window.onload = init;
 
 async function loadTemplate(f) { if(!f) return; const r = await fetch(`/template/${f}`); const d = await r.json(); if(d.content) document.getElementById("system").value = d.content; }
 
+// Enter Key Logic
+textInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+});
+
 navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
     mediaRecorder = new MediaRecorder(s);
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
@@ -98,7 +120,7 @@ async function send() {
     currentAbortController = new AbortController(); const sig = currentAbortController.signal;
     addMessage(t, 'user-msg'); textInput.value = "";
     const bubble = document.createElement("div"); win.appendChild(bubble);
-    let curBlock = null, buf = "";
+    let curBlock = null, buf = "", partialToken = "", isThinking = false;
 
     try {
         const r = await fetch("/chat_stream", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ text: t, system: document.getElementById("system").value }), signal: sig });
@@ -114,49 +136,83 @@ async function send() {
                 try {
                     const json = JSON.parse(line.trim().substring(6));
                     const token = json.choices[0].delta.content || "";
-                    buf += token;
+                    
+                    if (token.includes("<think>")) { isThinking = true; continue; }
+                    if (token.includes("</think>")) { isThinking = false; continue; }
+                    if (isThinking) continue;
+
+                    partialToken += token;
+                    if (/\s|[.,!?;:]/.test(partialToken.slice(-1))) {
+                        buf += partialToken;
+                        partialToken = "";
+                    }
 
                     let tag;
-                    while((tag = buf.match(/(###START_AUDIO###|###STOP_AUDIO###)/))) {
-                        const parts = buf.split(tag[0]);
+                    while((tag = buf.match(/(###START_AUDIO###|START\s+AUDIO|###STOP_AUDIO###|STOP\s+AUDIO|@@@ENGLISH@@@|ENGLISH|@@@STOP_ENGLISH@@@|STOP\s+ENGLISH|END\s+ENGLISH|END_ENGLISH)/i))) {
+                        const marker = tag[0];
+                        const parts = buf.split(new RegExp(marker.replace(/[#@]/g, '\\$&'), 'i'));
                         if(parts[0]) appendToken(curBlock || (curBlock=createBlock(bubble,'sys')), parts[0]);
                         
-                        if(tag[0]==="###START_AUDIO###") {
+                        const lower = marker.toLowerCase();
+                        if(lower.includes("start") && lower.includes("audio")) {
                             curBlock = createBlock(bubble,'ita');
-                        } else if(tag[0]==="###STOP_AUDIO###") {
-                            // NEW: Await the TTS request to guarantee sequence
-                            const targetBlock = curBlock;
-                            await triggerTTS(targetBlock, sig);
+                        } else if(lower.includes("stop") && lower.includes("audio")) {
+                            const target = curBlock;
+                            await triggerTTS(target, sig); 
+                            curBlock = createBlock(bubble,'sys');
+                        } else if(lower === "english" || (lower.includes("start") && lower.includes("english"))) {
+                            curBlock = createBlock(bubble,'eng');
+                        } else {
                             curBlock = createBlock(bubble,'sys');
                         }
-                        buf = parts.slice(1).join(tag[0]);
+                        buf = parts.slice(1).join(marker);
                     }
-                    if(buf.length > 5 && !buf.includes("#")) { 
+                    if(buf.length > 5 && !buf.includes("#") && !buf.includes("@")) { 
                         appendToken(curBlock || (curBlock=createBlock(bubble,'sys')), buf); buf = ""; 
                     }
                 } catch(e) {}
             }
         }
-        if(buf) appendToken(curBlock || createBlock(bubble,'sys'), buf);
+        if (partialToken) buf += partialToken;
+        if (buf) appendToken(curBlock || createBlock(bubble,'sys'), buf);
     } catch(e) {}
 }
 
-function createBlock(p, t) { const e = document.createElement("span"); e.className = t==='ita' ? "ita-block" : "sys-block"; p.appendChild(e); win.scrollTop = win.scrollHeight; return e; }
-function appendToken(b, t) { const c = t.replace(/[#@]/g, ""); b.innerText += c; win.scrollTop = win.scrollHeight; }
+function createBlock(p, t) { 
+    const e = document.createElement("span"); 
+    e.className = t==='ita' ? "ita-block" : (t==='eng' ? "eng-block" : "sys-block"); 
+    p.appendChild(e); win.scrollTop = win.scrollHeight; return e; 
+}
+
+// 3️⃣ Enhanced appendToken with Markdown Rendering
+function appendToken(b, t) { 
+    const c = t.replace(/(###|@@@|START|STOP|END|AUDIO|ENGLISH)/gi, "");
+    if(c) {
+        // Store raw text in a hidden attribute to keep track of the full content
+        const currentText = (b.dataset.raw || "") + c;
+        b.dataset.raw = currentText;
+        // Render Markdown into the block
+        b.innerHTML = marked.parse(currentText);
+    }
+    win.scrollTop = win.scrollHeight; 
+}
 
 async function triggerTTS(el, sig) {
-    const txt = el.innerText.trim(); if(txt.length < 2) return;
-    addToVocab(txt);
+    // 4️⃣ Use raw text for TTS, not the HTML rendered by Markdown
+    let txt = el.dataset.raw || el.innerText;
+    txt = txt.replace(/(###|@@@|START|STOP|END|AUDIO|ENGLISH)/gi, "").trim();
+    if(txt.length < 2) return;
     
-    // Create a specific controller for this TTS fetch only
-    const ttsController = new AbortController();
-    const ttsSig = ttsController.signal;
-
+    addToVocab(txt);
     try {
         const r = await fetch("/tts_sentence", { 
             method:"POST", headers:{"Content-Type":"application/json"}, 
-            body:JSON.stringify({ text: txt, tutor: document.getElementById("tutorSelect").value, language: document.getElementById("sttLang").value }), 
-            signal: sig // Links back to the master chat stop button
+            body:JSON.stringify({ 
+                text: txt, 
+                tutor: document.getElementById("tutorSelect").value, 
+                language: document.getElementById("sttLang").value 
+            }), 
+            signal: sig 
         });
         const d = await r.json();
         if(d.audio_url) {
