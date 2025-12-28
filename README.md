@@ -1,5 +1,7 @@
 SST-LLM-TTS Local single language voice with custom voices: Local language tutor
 ![My photo](images/screen.png)
+Using google/gemma-3-12b in this example.
+
 100% local language learning application. To be used with RTX 3090 or other 24gb+VRAM(best nvidia but you can try with AMD), this app integrates Large Language Models (LLMs), Fast Whisper for "Raw" speech-to-text, and Chatterbox Multilingual TTS with custom voice caching.
 🚀 Key Features
 
