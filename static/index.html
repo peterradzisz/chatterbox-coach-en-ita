@@ -8,168 +8,221 @@
     <style>
         :root { --bg: #0f172a; --pan: #1e293b; --ita: #00d2ff; --sys: #f1f5f9; --acc: #38bdf8; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--sys); margin: 0; padding: 10px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; }
+        
         .side-col { flex: 1; background: #020617; padding: 20px; border-radius: 20px; border: 1px solid #334155; overflow-y: auto; display: none; }
-        .main-col { flex: 3; display: flex; flex-direction: column; }
         @media (min-width: 800px) { .side-col { display: block; } }
+        
+        .main-col { flex: 3; display: flex; flex-direction: column; }
         .container { background: var(--pan); padding: 20px; border-radius: 15px; border: 1px solid #334155; flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+        
+        /* Table Styles (Restored) */
+        table { border-collapse: collapse; margin: 15px 0; width: 100%; font-size: 14px; }
+        th, td { border: 1px solid #334155; padding: 10px; text-align: left; color: #e2e8f0; }
+        th { background: #1e293b; color: #38bdf8; font-weight: bold; }
+        tr:nth-child(even) { background: #0f172a; }
+        code { background: #0f172a; padding: 2px 5px; border-radius: 4px; color: #f472b6; font-family: monospace; }
+        
         .top-btns { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 10; }
-        .stop-btn { background: #f59e0b; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .reset-btn { background: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-small { border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; }
+        .stop-btn { background: #f59e0b; }
+        .reset-btn { background: #ef4444; }
+        .folder-btn { background: #38bdf8; }
+        
         .chat-history { flex-grow: 1; background: #020617; overflow-y: auto; padding: 20px; border-radius: 10px; margin: 10px 0; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 10px; }
         
-        /* Blocks */
-        .ita-block { display: block; font-size: 24px; font-weight: 800; color: var(--ita); padding: 15px 15px 45px 15px; border-radius: 10px; background: #0f172a; border: 2px solid #1e293b; cursor: pointer; position: relative; margin-bottom: 5px; }
+        /* Chat Blocks */
+        .ita-block { display: block; font-size: 24px; font-weight: 800; color: var(--ita); padding: 15px; border-radius: 10px; background: #0f172a; border: 2px solid #1e293b; cursor: pointer; position: relative; margin-bottom: 5px; }
         .ita-block.ready { border-color: #facc15; }
         .ita-block.playing { border-color: #22c55e; background: #064e3b; }
         .dl-btn { position: absolute; left: 10px; bottom: 10px; font-size: 11px; color: #94a3b8; background: #1e293b; border: 1px solid #334155; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-weight: bold; z-index: 5; }
         .play-hint { position: absolute; right: 12px; bottom: 10px; font-size: 11px; color: #facc15; }
+        
         .eng-block { display: block; font-size: 16px; color: #94a3b8; font-style: italic; border-left: 3px solid #475569; padding-left: 10px; margin: 5px 0; }
         .sys-block { display: block; font-size: 15px; color: #cbd5e1; }
+        
+        .history-user { background: #334155; color: white; align-self: flex-end; padding: 12px; border-radius: 10px; margin-bottom: 10px; margin-left: auto; max-width: 80%; border: 1px solid #475569; }
 
-        /* 2️⃣ Markdown Table Styling */
-        table { border-collapse: collapse; margin: 10px 0; width: 100%; font-size: 14px; }
-        th, td { border: 1px solid #334155; padding: 8px; text-align: left; }
-        th { background: #1e293b; color: var(--acc); }
-        code { background: #1e293b; padding: 2px 4px; border-radius: 4px; color: #f472b6; }
-
-        select, textarea { background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; width: 100%; box-sizing: border-box; padding: 10px; font-family: inherit; }
-        label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 4px; }
+        select, textarea { background: #1e293b; color: white; border: 1px solid #334155; border-radius: 8px; width: 100%; padding: 10px; box-sizing: border-box; }
+        label { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; display: block; }
         .btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; background: var(--acc); color: #0f172a; cursor: pointer; }
-        .recording { background: #ef4444 !important; color: white; animation: pulse 1.5s infinite; }
-        .vocab-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid #38bdf8; font-size: 14px; color: #e2e8f0; }
+        .recording { background: #ef4444 !important; animation: pulse 1.5s infinite; }
+        .vocab-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; border-left: 3px solid #38bdf8; font-size: 14px; }
+        .save-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; background: #1e293b; padding: 5px 10px; border-radius: 8px; border: 1px solid #334155; width: fit-content; }
     </style>
 </head>
 <body>
-    <div class="side-col"><h3 style="color: var(--ita); margin-top:0;">Vocabulary Log</h3><div id="vocabList"></div></div>
+    <div class="side-col">
+        <h3 style="color: var(--ita); margin-top:0;">Vocabulary Log</h3>
+        <div id="vocabList"></div>
+    </div>
     <div class="main-col">
         <div class="container">
-            <div class="top-btns"><button class="stop-btn" onclick="stopWork()">⏹ STOP</button><button class="reset-btn" onclick="resetAll()">♻ RESET</button></div>
-            <h2 style="margin:0 0 10px 0; color:var(--acc);">🌍 Tutor Master 3090</h2>
+            <div class="top-btns">
+                <button class="btn-small folder-btn" onclick="openFolder()" title="Open Folder">📂</button>
+                <button class="btn-small stop-btn" onclick="stopWork()">⏹ STOP</button>
+                <button class="btn-small reset-btn" onclick="resetAll()">♻ RESET</button>
+            </div>
+            <h2 style="margin:0 0 5px 0; color:var(--acc);">🌍 Tutor Master 3090</h2>
+            
+            <div class="save-toggle">
+                <input type="checkbox" id="saveMode">
+                <label for="saveMode">SAVE SESSION (Offline Archive)</label>
+            </div>
+
             <div style="grid-template-columns: 1fr 1fr; display:grid; gap:10px; margin-bottom:10px;">
                 <div><label>Voice</label><select id="tutorSelect"></select></div>
-                <div><label>Speaking...</label>
+                <div><label>Target Language</label>
                     <select id="sttLang">
                         <option value="en">English</option><option value="it" selected>Italian</option>
                         <option value="pl">Polish</option><option value="fr">French</option>
                         <option value="de">German</option><option value="es">Spanish</option>
-                        <option value="pt">Portuguese</option><option value="tr">Turkish</option>
-                        <option value="ru">Russian</option><option value="nl">Dutch</option>
-                        <option value="cs">Czech</option><option value="ar">Arabic</option>
-                        <option value="zh-cn">Chinese</option><option value="ja">Japanese</option>
-                        <option value="hu">Hungarian</option><option value="ko">Korean</option>
-                        <option value="hi">Hindi</option>
                     </select>
                 </div>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <label>System Prompt</label>
-                <select id="templateSelect" style="width:auto; height:25px; font-size:11px;" onchange="loadTemplate(this.value)"><option value="">Templates...</option></select>
+                <select id="templateSelect" style="width:auto; height:25px; font-size:11px;" onchange="loadTemplate(this.value)">
+                    <option value="">Load Template...</option>
+                </select>
             </div>
             <textarea id="system" rows="2">Professional Multi-language Tutor. Use START AUDIO and STOP AUDIO tags.</textarea>
             <div class="chat-history" id="chatWindow"></div>
-            <textarea id="input" rows="2" placeholder="Start your lesson... (Enter to send)"></textarea>
+            <textarea id="input" rows="2" placeholder="Start your lesson..."></textarea>
             <div style="display:flex; gap:10px; margin-top:10px;"><button id="micBtn" class="btn" style="flex:1; background:#475569; color:white;">🎤 Speak</button><button onclick="send()" class="btn" style="flex:2;">Send Message</button></div>
         </div>
     </div>
     <audio id="player" style="display:none;"></audio>
+
+<script src="history.js"></script>
 
 <script>
 let mediaRecorder, audioChunks = [], currentAbortController = null;
 const win = document.getElementById("chatWindow"), textInput = document.getElementById("input"), mic = document.getElementById('micBtn'), player = document.getElementById("player");
 let currentPlayingBlock = null;
 
-async function stopWork() { 
-    if(currentAbortController) currentAbortController.abort(); 
-    player.pause(); 
-    if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing");
-    await fetch('/abort_tts', { method: 'POST' }); 
-}
-
-async function resetAll() { await stopWork(); win.innerHTML = ""; textInput.value = ""; document.getElementById("vocabList").innerHTML = ""; await fetch('/clear_audio', { method: 'POST' }); }
-
 async function init() {
-    const tRes = await fetch('/get_tutors'); const tData = await tRes.json();
-    tData.tutors.forEach(n => { const o = document.createElement("option"); o.value = n; o.innerText = n.toUpperCase(); document.getElementById("tutorSelect").appendChild(o); });
-    const pRes = await fetch('/get_templates'); const pData = await pRes.json();
-    pData.templates.forEach(f => { const o = document.createElement("option"); o.value = f; o.innerText = f.replace('.txt',''); document.getElementById("templateSelect").appendChild(o); });
+    // Check global variable from history.js (for offline viewing)
+    if (typeof window.SESSION_HISTORY !== 'undefined' && window.SESSION_HISTORY.length > 0) {
+        document.getElementById("saveMode").checked = true;
+        document.getElementById("saveMode").parentElement.style.display = 'none';
+        document.getElementById("input").placeholder = "Session Archive (Read Only)";
+        document.getElementById("input").disabled = true;
+        loadHistory(); 
+    }
+
+    try {
+        const tRes = await fetch('/get_tutors'); const tData = await tRes.json();
+        tData.tutors.forEach(n => { const o = document.createElement("option"); o.value = n; o.innerText = n.toUpperCase(); document.getElementById("tutorSelect").appendChild(o); });
+        
+        const pRes = await fetch('/get_templates'); const pData = await pRes.json();
+        pData.templates.forEach(f => { const o = document.createElement("option"); o.value = f; o.innerText = f.replace('.txt',''); document.getElementById("templateSelect").appendChild(o); });
+    } catch(e) {}
 }
 window.onload = init;
 
-async function loadTemplate(f) { if(!f) return; const r = await fetch(`/template/${f}`); const d = await r.json(); if(d.content) document.getElementById("system").value = d.content; }
+function loadHistory() {
+    const history = window.SESSION_HISTORY || [];
+    history.forEach(item => {
+        if(item.role === 'user') {
+            const d = document.createElement("div"); d.className = "history-user"; d.innerText = item.text; win.appendChild(d);
+        } else {
+            const bubble = document.createElement("div"); win.appendChild(bubble);
+            // Re-parse the full text to reconstruct blocks (matches Live Logic)
+            const parts = item.text.split(/(###START_AUDIO###|START\s+AUDIO|###STOP_AUDIO###|STOP\s+AUDIO|@@@ENGLISH@@@|ENGLISH|@@@STOP_ENGLISH@@@|STOP\s+ENGLISH|END\s+ENGLISH|END_ENGLISH)/i);
+            
+            let currentType = 'sys';
+            parts.forEach(part => {
+                const lower = part.toLowerCase();
+                if(lower.includes("start") && lower.includes("audio")) { currentType = 'ita'; return; }
+                if(lower.includes("stop") && lower.includes("audio")) { currentType = 'sys'; return; }
+                if(lower.includes("english")) { currentType = 'eng'; return; }
+                
+                if(part.trim().length === 0) return;
 
-// Enter Key Logic
-textInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
-});
+                const el = createBlock(bubble, currentType);
+                // We render Markdown for tables/formatting
+                el.innerHTML = marked.parse(part);
+
+                // KEY: Check if we have an audio mapping for this text segment
+                const trimmedKey = part.trim();
+                if (item.audio_map && item.audio_map[trimmedKey]) {
+                    const audioPath = item.audio_map[trimmedKey];
+                    el.classList.add("ready");
+                    const h = document.createElement("div"); h.className="play-hint"; h.innerText="▶ Play"; el.appendChild(h);
+                    const dl = document.createElement("a"); dl.className="dl-btn"; dl.innerText="💾 MP3"; 
+                    dl.href = audioPath; dl.setAttribute('download', ''); dl.onclick=e=>e.stopPropagation(); el.appendChild(dl);
+                    el.onclick = () => { player.pause(); if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing"); player.src = audioPath; player.play(); el.classList.add("playing"); currentPlayingBlock = el; };
+                }
+            });
+        }
+    });
+}
+
+async function loadTemplate(f) { if(!f) return; const r = await fetch(`/template/${f}`); const d = await r.json(); if(d.content) document.getElementById("system").value = d.content; }
+async function openFolder() { await fetch('/open_session_folder', { method: 'POST' }); }
+async function stopWork() { if(currentAbortController) currentAbortController.abort(); player.pause(); await fetch('/abort_tts', { method: 'POST' }); }
+async function resetAll() { await stopWork(); win.innerHTML = ""; textInput.value = ""; document.getElementById("vocabList").innerHTML = ""; await fetch('/reset_session', { method: 'POST' }); }
 
 navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
     mediaRecorder = new MediaRecorder(s);
     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
     mediaRecorder.onstop = async () => {
         const fd = new FormData(); fd.append('audio', new Blob(audioChunks)); fd.append('language', document.getElementById('sttLang').value);
-        const r = await fetch('/stt', { method: 'POST', body: fd }); const d = await r.json(); textInput.value = d.text;
+        mic.innerText = "⌛";
+        const r = await fetch('/stt', { method: 'POST', body: fd }); const d = await r.json(); 
+        textInput.value = d.text; mic.innerText = "🎤 Speak"; mic.classList.remove('recording');
     };
 });
-function startRec(e) { if(e.type==='touchstart') e.preventDefault(); audioChunks=[]; mediaRecorder.start(); mic.classList.add('recording'); }
-function stopRec(e) { if(e.type==='touchend') e.preventDefault(); if(mediaRecorder.state==='recording') mediaRecorder.stop(); mic.classList.remove('recording'); }
-mic.addEventListener('mousedown', startRec); mic.addEventListener('touchstart', startRec);
-mic.addEventListener('mouseup', stopRec); mic.addEventListener('touchend', stopRec);
+function startRec() { audioChunks=[]; mediaRecorder.start(); mic.classList.add('recording'); mic.innerText = "🛑 Recording..."; }
+function stopRec() { if(mediaRecorder.state==='recording') mediaRecorder.stop(); }
+mic.addEventListener('mousedown', startRec); mic.addEventListener('mouseup', stopRec);
 
 async function send() {
     const t = textInput.value; if(!t) return;
-    currentAbortController = new AbortController(); const sig = currentAbortController.signal;
+    currentAbortController = new AbortController();
     addMessage(t, 'user-msg'); textInput.value = "";
     const bubble = document.createElement("div"); win.appendChild(bubble);
     let curBlock = null, buf = "", partialToken = "", isThinking = false;
+    
+    const saveMode = document.getElementById("saveMode").checked;
 
     try {
-        const r = await fetch("/chat_stream", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ text: t, system: document.getElementById("system").value }), signal: sig });
+        const r = await fetch("/chat_stream", { 
+            method: "POST", headers: {"Content-Type":"application/json"}, 
+            body: JSON.stringify({ 
+                text: t, system: document.getElementById("system").value, save_mode: saveMode 
+            }), 
+            signal: currentAbortController.signal 
+        });
         const reader = r.body.getReader(); const dec = new TextDecoder();
-        
         while (true) {
             const { done, value } = await reader.read(); if(done) break;
             const chunk = dec.decode(value, {stream:true});
             const lines = chunk.split("\n");
-            
             for(let line of lines) {
                 if(!line.trim().startsWith("data: ") || line.includes("[DONE]")) continue;
                 try {
                     const json = JSON.parse(line.trim().substring(6));
                     const token = json.choices[0].delta.content || "";
-                    
                     if (token.includes("<think>")) { isThinking = true; continue; }
                     if (token.includes("</think>")) { isThinking = false; continue; }
                     if (isThinking) continue;
 
                     partialToken += token;
-                    if (/\s|[.,!?;:]/.test(partialToken.slice(-1))) {
-                        buf += partialToken;
-                        partialToken = "";
-                    }
+                    if (/\s|[.,!?;:]/.test(partialToken.slice(-1))) { buf += partialToken; partialToken = ""; }
 
                     let tag;
                     while((tag = buf.match(/(###START_AUDIO###|START\s+AUDIO|###STOP_AUDIO###|STOP\s+AUDIO|@@@ENGLISH@@@|ENGLISH|@@@STOP_ENGLISH@@@|STOP\s+ENGLISH|END\s+ENGLISH|END_ENGLISH)/i))) {
-                        const marker = tag[0];
-                        const parts = buf.split(new RegExp(marker.replace(/[#@]/g, '\\$&'), 'i'));
+                        const marker = tag[0]; const parts = buf.split(new RegExp(marker.replace(/[#@]/g, '\\$&'), 'i'));
                         if(parts[0]) appendToken(curBlock || (curBlock=createBlock(bubble,'sys')), parts[0]);
-                        
                         const lower = marker.toLowerCase();
-                        if(lower.includes("start") && lower.includes("audio")) {
-                            curBlock = createBlock(bubble,'ita');
-                        } else if(lower.includes("stop") && lower.includes("audio")) {
-                            const target = curBlock;
-                            await triggerTTS(target, sig); 
-                            curBlock = createBlock(bubble,'sys');
-                        } else if(lower === "english" || (lower.includes("start") && lower.includes("english"))) {
-                            curBlock = createBlock(bubble,'eng');
-                        } else {
-                            curBlock = createBlock(bubble,'sys');
-                        }
+                        if(lower.includes("start") && lower.includes("audio")) curBlock = createBlock(bubble,'ita');
+                        else if(lower.includes("stop") && lower.includes("audio")) { await triggerTTS(curBlock, currentAbortController.signal); curBlock = createBlock(bubble,'sys'); }
+                        else if(lower.includes("english")) curBlock = createBlock(bubble,'eng');
+                        else curBlock = createBlock(bubble,'sys');
                         buf = parts.slice(1).join(marker);
                     }
-                    if(buf.length > 5 && !buf.includes("#") && !buf.includes("@")) { 
-                        appendToken(curBlock || (curBlock=createBlock(bubble,'sys')), buf); buf = ""; 
-                    }
+                    if(buf.length > 5 && !buf.includes("#") && !buf.includes("@")) { appendToken(curBlock || (curBlock=createBlock(bubble,'sys')), buf); buf = ""; }
                 } catch(e) {}
             }
         }
@@ -178,55 +231,35 @@ async function send() {
     } catch(e) {}
 }
 
-function createBlock(p, t) { 
-    const e = document.createElement("span"); 
-    e.className = t==='ita' ? "ita-block" : (t==='eng' ? "eng-block" : "sys-block"); 
-    p.appendChild(e); win.scrollTop = win.scrollHeight; return e; 
-}
-
-// 3️⃣ Enhanced appendToken with Markdown Rendering
+function createBlock(p, t) { const e = document.createElement("span"); e.className = t==='ita' ? "ita-block" : (t==='eng' ? "eng-block" : "sys-block"); p.appendChild(e); win.scrollTop = win.scrollHeight; return e; }
 function appendToken(b, t) { 
     const c = t.replace(/(###|@@@|START|STOP|END|AUDIO|ENGLISH)/gi, "");
     if(c) {
-        // Store raw text in a hidden attribute to keep track of the full content
-        const currentText = (b.dataset.raw || "") + c;
-        b.dataset.raw = currentText;
-        // Render Markdown into the block
-        b.innerHTML = marked.parse(currentText);
+        b.dataset.raw = (b.dataset.raw || "") + c;
+        b.innerHTML = marked.parse(b.dataset.raw);
     }
     win.scrollTop = win.scrollHeight; 
 }
-
 async function triggerTTS(el, sig) {
-    // 4️⃣ Use raw text for TTS, not the HTML rendered by Markdown
     let txt = el.dataset.raw || el.innerText;
     txt = txt.replace(/(###|@@@|START|STOP|END|AUDIO|ENGLISH)/gi, "").trim();
     if(txt.length < 2) return;
-    
     addToVocab(txt);
     try {
-        const r = await fetch("/tts_sentence", { 
-            method:"POST", headers:{"Content-Type":"application/json"}, 
-            body:JSON.stringify({ 
-                text: txt, 
-                tutor: document.getElementById("tutorSelect").value, 
-                language: document.getElementById("sttLang").value 
-            }), 
-            signal: sig 
-        });
+        const r = await fetch("/tts_sentence", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ text: txt, tutor: document.getElementById("tutorSelect").value, language: document.getElementById("sttLang").value }), signal: sig });
         const d = await r.json();
         if(d.audio_url) {
             el.classList.add("ready");
             const h = document.createElement("div"); h.className="play-hint"; h.innerText="▶ Play"; el.appendChild(h);
-            const dl = document.createElement("a"); dl.className="dl-btn"; dl.innerText="💾 Save MP3"; 
-            dl.href=`/download_mp3/${d.audio_url.split('/').pop()}`; 
-            dl.setAttribute('download', ''); dl.onclick=e=>e.stopPropagation(); el.appendChild(dl);
+            const dl = document.createElement("a"); dl.className="dl-btn"; dl.innerText="💾 MP3"; 
+            const fName = d.audio_url.split('/').pop().replace(".wav", ".mp3");
+            dl.href=`/download_mp3/${fName}`; dl.setAttribute('download', ''); dl.onclick=e=>e.stopPropagation(); el.appendChild(dl);
             el.onclick = () => { player.pause(); if(currentPlayingBlock) currentPlayingBlock.classList.remove("playing"); player.src=d.audio_url; player.play(); el.classList.add("playing"); currentPlayingBlock=el; };
         }
     } catch(e) {}
 }
-function addToVocab(t) { const l = document.getElementById("vocabList"); const i = document.createElement("div"); i.className="vocab-item"; i.innerText=t.length > 60 ? t.substring(0,57)+"..." : t; l.insertBefore(i, l.firstChild); }
-function addMessage(t, c) { const d = document.createElement("div"); d.innerText = t; d.style.padding = "10px"; if (c === 'user-msg') { d.style.background = "#334155"; d.style.borderRadius = "10px"; d.style.alignSelf = "flex-end"; d.style.maxWidth = "80%"; d.style.marginLeft = "auto"; d.style.marginBottom = "20px"; } win.appendChild(d); }
+function addToVocab(t) { const l = document.getElementById("vocabList"); const i = document.createElement("div"); i.className="vocab-item"; i.innerText=t.length>60?t.substring(0,57)+"...":t; l.insertBefore(i, l.firstChild); }
+function addMessage(t, c) { const d = document.createElement("div"); d.innerText = t; d.style.padding="10px"; if (c==='user-msg') { d.style.background="#334155"; d.style.borderRadius="10px"; d.style.alignSelf="flex-end"; d.style.maxWidth="80%"; d.style.marginLeft="auto"; d.style.marginBottom="20px"; } win.appendChild(d); }
 </script>
 </body>
 </html>

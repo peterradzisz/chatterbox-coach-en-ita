@@ -1,6 +1,6 @@
-Tutor Pro 3090: High-Performance Local Italian Tutor
-
-A state-of-the-art, 100% local Italian language learning application. Powered by an RTX 3090, this app integrates Large Language Models (LLMs), Fast Whisper for "Raw" speech-to-text, and Chatterbox Multilingual TTS with custom voice caching.
+SST-LLM-TTS Local single language voice with custom voices: Local language tutor
+![My photo](images/screen.png)
+100% local language learning application. To be used with RTX 3090 or other 24gb+VRAM(best nvidia but you can try with AMD), this app integrates Large Language Models (LLMs), Fast Whisper for "Raw" speech-to-text, and Chatterbox Multilingual TTS with custom voice caching.
 🚀 Key Features
 
     Memory Hack (Embedding Caching): Skips the "learning" phase for voices. Once a tutor's .wav is processed, the speaker embedding is cached to disk, allowing for near-instant speech generation.
@@ -28,6 +28,11 @@ A state-of-the-art, 100% local Italian language learning application. Powered by
     TTS: chatterbox Multilingual TTS.
 
     Audio Processing: pydub + ffmpeg.
+MODELS to use: at least 8b, the bigger the better around 20gb
+llama-3.1-8b-lexi-uncensored-v2 (or almost any llama 3.1 instruct) 
+unsloth/gpt-oss-20b
+gemma3b
+like gemma-3-27b-abliterated-normpreserve
 
 📦 Installation
 1. Prerequisites
